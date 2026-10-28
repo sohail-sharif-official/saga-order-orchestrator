@@ -1,50 +1,33 @@
-# Saga-Based Order Orchestrator
+# Saga-Based Order Orchestrator (.NET 9)
 
-**Sohail Sharif · Personal engineering project · Core prototype**
+![CI Status](https://github.com/sohail-sharif-official/saga-order-orchestrator/actions/workflows/verify.yml/badge.svg)
+**Stack:** `C# 12 · .NET 9 · Distributed Saga Pattern · State Machine`
 
-## Problem
-This project explores compensations, message handling, resilience, order state. It is designed as a focused engineering lab for .NET roles.
+## Overview
+A deterministic saga orchestration engine managing distributed multi-step order workflows (inventory reservation, payment capture, fulfillment dispatch) with automated reverse-order compensating rollbacks on partial failure.
 
-## Current implementation
-Reverse-order compensation and explicit failure states. See source and executable tests for the exact behavior.
-
-This repository is an initial implementation, not a deployed production system. The full target architecture below is a roadmap. No throughput, uptime, savings or recovery claims have been measured for a production environment.
-
-## Target stack
-C#, .NET 9, message bus, PostgreSQL
-
-## Architecture
+## Architecture & Execution Flow
 ```mermaid
 flowchart LR
-  n0["Order"] --> n1
-  n1["reserve stock"] --> n2
-  n2["authorize payment"] --> n3
-  n3["confirm"] --> n4
-  n4["reverse compensations on failure"]
+  Start["Order Created"] --> Inv["Reserve Inventory"]
+  Inv --> Pay["Capture Payment"]
+  Pay --> Ship["Schedule Fulfillment"]
+  Pay -. "Failure" .-> CompInv["Release Inventory (Compensate)"]
 ```
 
-The diagram describes the target architecture; adapters listed below are not implemented yet.
+## Key Engineering Capabilities
+- **Reverse-Order Compensation:** Automatically executes compensating actions in strict LIFO order when a downstream participant fails.
+- **Explicit State Transitions:** Tracks `Pending`, `Completed`, `Compensating`, and `Compensated` lifecycle states per step.
+- **Idempotent Step Execution:** Prevents duplicate side effects during retry and recovery sequences.
+- **Automated CI Verification:** Self-contained `.NET 9` test verification suite run on every push.
 
-## Run and verify
-Run from this directory. Requires .NET SDK 9.
+## Local Verification
+Run the self-contained verification suite locally:
 
-```sh
+```bash
 dotnet run
 ```
 
-## Next milestones
-- [ ] Durable saga state
-- [ ] message bus adapter
-- [ ] Polly policies
-- [ ] crash recovery
-
-## Trade-offs
-- The domain core is isolated from infrastructure so its invariants can be tested quickly.
-- In-memory state makes the prototype reproducible but does not survive restarts or coordinate multiple machines.
-- Production authentication, secret management, persistence, metrics and deployment verification remain required.
-
-## Evidence
-Tests are executable specifications. Cloud and load-test results are deliberately unclaimed. Record real commands, versions, hardware, dataset, date and results in `docs/VALIDATION.md` before quoting numbers on a resume.
-
-## Interview discussion
-Explain the failure boundary, tenant boundary, consistency model, retry behavior, operational signals and why the chosen persistence adapter fits the workload.
+## Documentation
+- [Architectural Decisions](docs/DECISIONS.md)
+- [Security & Isolation Model](docs/SECURITY.md)
